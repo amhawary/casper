@@ -8,7 +8,7 @@ import pandas as pd
 import xarray as xr
 import pickle as pkl
 import requests as req
-
+from pytrends.request import TrendReq
 
 
 def load_covid_df():
@@ -124,6 +124,25 @@ def compute_growth_dict(covid_df,save_as="g_dict.pkl"):
         pkl.dump(g_dict, handle, protocol=pkl.HIGHEST_PROTOCOL)
     return g_dict
 
+def compute_search_penalty_country_dict(neg_terms,save_as="sp_dict.pkl"):
+    s_t=[i for i in neg_terms.keys()]
+    pytrend = TrendReq()
+    pytrend.build_payload(kw_list=s_t)# Interest by Region
+    df = pytrend.interest_by_region()
+    country_penalty_dict={}
+    for i in df.iterrows():
+        country=i[0]
+        total_penalty=0
+        for s_t_idx in range(len(s_t)):
+            search_intrest=i[1][s_t_idx]
+            total_penalty+=search_intrest*neg_terms[s_t[s_t_idx]] #multiply the penalty by the search term intrest 
+        country_penalty_dict.update({country:total_penalty})
+
+    print("saving country_penalty_dict as",save_as)
+    with open(save_as, 'wb+') as handle:
+        pkl.dump(country_penalty_dict, handle, protocol=pkl.HIGHEST_PROTOCOL)
+    return country_penalty_dict
+    
 if __name__=="__main__":
     geo_dist_factor=2 #in lat/lot degrees what's the range to consider in a city?
     mean_col_name="ColumnAmountNO2" # what column of the data to consider for our operations?
@@ -133,3 +152,8 @@ if __name__=="__main__":
     countries_dict=get_countries_dict(covid_df)
     compute_dates_no2_mean_dict(geo_dist_factor,data_dir,countries_dict,col_name=mean_col_name)
     compute_growth_dict(covid_df)
+    try:
+        neg_terms=pkl.load(open("neg_terms.pkl","rb"))
+        compute_search_penalty_country_dict(neg_terms)
+    except FileNotFoundError:
+        print("Couldn't load neg_terms.pkl and compute Search term Penalties")
