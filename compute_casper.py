@@ -147,23 +147,14 @@ for c_name in act_diff_ratio.keys():
     casper_score=calc_casper(act_diff_ratio[c_name],growth_over_time,search_pen)
     CASPER_INDEX.update({c_name:casper_score})
 
-CASPER_INDEX_scaled={} # the higher the better
-casper_array=np.array([[i[0],float(i[1])] for i in CASPER_INDEX.items()])
-
-def rescale_linear(array, new_min, new_max):
-    """Rescale an arrary linearly."""
-    minimum, maximum = np.min(array), np.max(array)
-    m = (new_max - new_min) / (maximum - minimum)
-    b = new_min - m * minimum
-    return m * array + b
-
-x=np.array([float(i) for i in casper_array[:,1]])
-c_idx_keys=[i for i in casper_array[:,0]] #[i for i in CASPER_INDEX.keys()]
-for i in range(len(c_idx_keys)):
-    CASPER_INDEX_scaled.update({c_idx_keys[i]:rescale_linear(x,0,1000)[i]})
-
-
+a=0
+CASPER_INDEX_SORTED={}
+for k, v in sorted(CASPER_INDEX.items(), key=lambda item: item[1]):
+    a+=1
+    CASPER_INDEX_SORTED.update({k:a})
+    
+    
 if __name__=="__main__":
     print("Saving CASPER score as ",save_as)
     with open(save_as, 'w+') as handle:
-        json.dump(CASPER_INDEX_scaled, handle)
+        json.dump(CASPER_INDEX_SORTED, handle)
