@@ -9,7 +9,10 @@ import xarray as xr
 import pickle as pkl
 import requests as req
 from pytrends.request import TrendReq
+from itertools import chain
 
+def dict_union(*args):
+    return dict(chain.from_iterable(d.items() for d in args))
 
 def load_covid_df():
     st_f_name="covid19API.json"
@@ -104,21 +107,55 @@ def compute_growth_dict(covid_df,save_as="g_dict.pkl"):
     1-g_dict it offset from the actual case growth by 2 days (good enough I am not fixing it)
     2-g_dict is sometimes negative if recovred cases are more than new cases (used by the weighting algo)
     '''
+    g_rate=0
     ccd=np.asarray(covid_df[["Country","Confirmed","Date"]])
     for idx,row in enumerate(ccd):
         country=row[0]
         confirmed=row[1]
         date=row[2]
+        try:
+            if date!=ccd[idx+1][2]:
+                g_rate=ccd[idx+1][1]-confirmed
+        except IndexError:
+            g_rate=0
+            continue
         if country not in g_dict.keys():
-            g_dict.update({country:{date:ccd[idx+1][1]-confirmed}})
+            g_dict.update({country:{date:g_rate}})
         else:
-            try:
-                if ccd[idx+1][0]==country:
-                    g_dict[country].update({date:ccd[idx+1][1]-confirmed})
-                else:
-                    pass
-            except:
+            if ccd[idx+1][0]==country:
+                g_dict[country].update({date:g_rate})
+            else:
                 pass
+    
+    # not all countries report the same way
+    # countries in st2_ct report multipule times per day resulting in negative growth numbers 
+    # these 2 blocks of code fix that
+    st2_ct=[]
+    keys_g_dict=[i for i in g_dict.keys()]
+    for c_name in keys_g_dict:
+        if min([d[1] for d in g_dict[c_name].items()])<0:
+            st2_ct.append(c_name)
+            g_dict.pop(c_name)
+    st2_ct_arr=np.array([i for i in ccd if i[0] in st2_ct])
+
+    lsum=0
+    new_d={}
+    for idx,row in enumerate(st2_ct_arr):
+        cname=row[0]
+        date=row[2]
+        try:
+            if row[2]==st2_ct_arr[idx+1][2]:
+                lsum+=row[1]
+            else:
+                if cname not in new_d.keys():
+                    new_d.update({cname:{date:lsum}})
+                else:
+                    new_d[cname].update({date:lsum})
+
+        except IndexError:
+            pass
+            
+    g_dict=dict_union(g_dict,new_d)
     print("saving g_dict as",save_as)
     with open(save_as, 'wb+') as handle:
         pkl.dump(g_dict, handle, protocol=pkl.HIGHEST_PROTOCOL)
