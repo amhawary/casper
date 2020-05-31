@@ -13,8 +13,8 @@ no2_dict=pkl.load(open("dates_dict.pkl","rb"))
 
 CASPER_INDEX={}
 w_act_diff_ratio=.6
-w_search_pen=.4
-w_growth=.8
+w_search_pen=.08
+w_growth=.7
 pop_per=0.00012 # from 0-1, percentage of population that are infected each day
 
 # reduction_in_activity_percentage={} # reduction in activity since g_dict is more than 0.012% of the population
@@ -98,13 +98,11 @@ for c_name in new_no2_dict.keys():
     date2meanNo2=new_no2_dict[c_name]
     means_b4=np.zeros(shape=(0,))
     means_after=np.zeros(shape=(0,))
-    nd=False
     for date in date2meanNo2.keys():
         try:
             if np.isnan(it_is_srys[c_name]):
-                nd=True
-                continue
-        except:
+                continue 
+        except TypeError: # the type is not a nan but a pd.Timestamp
             pass
         if date>=it_is_srys[c_name]: #if it's after it being srys
             means_b4=np.hstack([means_b4,[date2meanNo2[date]]])
@@ -114,14 +112,14 @@ for c_name in new_no2_dict.keys():
     means_b4=means_b4[np.logical_not(np.isnan(means_b4))]
     means_after=means_after[np.logical_not(np.isnan(means_after))]
     
-    if nd==False:
-        b4_turning_point.update({c_name:np.mean(means_b4)})
-        after_turning_point.update({c_name:np.mean(means_after)})
-    else:
-        b4_turning_point.update({c_name:0})
-        after_turning_point.update({c_name:0})
+    b4_tp_mean=np.nanmean(means_b4)
+    after_tp_mean=np.nanmean(means_after)
     
-
+    if np.isnan(b4_tp_mean):b4_tp_mean=0
+    if np.isnan(after_tp_mean):after_tp_mean=0
+        
+    b4_turning_point.update({c_name:b4_tp_mean})
+    after_turning_point.update({c_name:after_tp_mean})
 
 
 act_diff_ratio={} # the lower the score the better
@@ -135,7 +133,8 @@ for c_name in b4_turning_point.keys():
 
 
 def calc_casper(act_diff_ratio,growth,search_pen):
-    return (w_growth*sum(growth))*((w_search_pen*search_pen)+(w_act_diff_ratio*act_diff_ratio))
+    acc_g=[abs(growth[i]-growth[i-1]) for i in range(len(growth)) if i!=len(growth) and i-1!=-1]
+    return (w_growth*max(acc_g))*((w_search_pen*search_pen)+(w_act_diff_ratio*act_diff_ratio))
     
 for c_name in act_diff_ratio.keys():
     
