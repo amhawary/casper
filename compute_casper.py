@@ -129,7 +129,7 @@ for c_name in b4_turning_point.keys():
     if b4_turning_point[c_name]==0:
         act_diff_ratio.update({c_name:0})
         continue
-    act_diff_ratio.update({c_name:(b4_turning_point[c_name]-after_turning_point[c_name])})
+    act_diff_ratio.update({c_name:(b4_turning_point[c_name]-after_turning_point[c_name])/b4_turning_point[c_name]})
 
 
 

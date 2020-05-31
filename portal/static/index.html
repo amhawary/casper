@@ -4,7 +4,7 @@
 <script type="text/javascript" src="static/aalib.js"></script>
 <script>aalib.read.image.fromURL("static/index.jpg")
     .map(aalib.filter.contrast(0.9))
-    .map(aalib.aa({ width: 250, height: 100 }))
+    .map(aalib.aa({ width: 250, height: 100 ,colored:true}))
     .map(aalib.filter.brightness(10))
     .map(aalib.render.html({ background: "#fff", fontFamily: "monospace" })).do(function (el) {document.body.appendChild(el);})
     .subscribe();
